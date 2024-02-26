@@ -2,8 +2,10 @@ use std::ops::{AddAssign, MulAssign};
 use std::str::FromStr;
 
 use ark_bls12_381::Fr;
-use ark_ff::{One,Zero, Field,PrimeField};
+use ark_ff::{BigInt, Field, One, PrimeField, Zero};
 use ark_r1cs_std::alloc::AllocVar;
+
+use ark_r1cs_std::fields::FieldVar;
 use ark_r1cs_std::{fields::fp::FpVar, R1CSVar};
 use ark_r1cs_std::bits::uint32::UInt32;
 
@@ -32,13 +34,16 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for ComponentsCircuit<F> {
     ) -> Result<(), SynthesisError> {
         // we need 2^s = d
         let mut d = FpVar::<F>::new_input(cs.clone(), || self.d.ok_or(SynthesisError::AssignmentMissing))?;
-        let mut two= FpVar::<F>::new_input(cs.clone(), || self.d.ok_or(SynthesisError::AssignmentMissing))?;
+        let mut two = FpVar::<F>::new_input(cs.clone(), || self.d.ok_or(SynthesisError::AssignmentMissing))?;
+        // INIT 
+        let mut curr_var = FpVar::<F>::new_variable(cs.clone(), || Ok( F::from(2u64)), ark_r1cs_std::alloc::AllocationMode::Constant)?;
 
-        let mut curr_var = FpVar::<F>::new_variable(cs,|| Ok(FpVar::Constant(F::one())),ark_r1cs_std::alloc::AllocationMode::Constant);
-
-
-
-
+        // curr_var = curr_var ^ s  : pow
+        let s_slice: &[u64] = &[self.s];
+        if let Err(err) = curr_var.pow_by_constant(s_slice) {
+            return Err(err.into());
+        }
+        print!("curr_var: {:?}", curr_var.value().unwrap());
 
         
 
@@ -47,6 +52,7 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for ComponentsCircuit<F> {
 
         Ok(())
     }
+    
 }
 impl<ConstraintF: Field> ConstraintSynthesizer<ConstraintF> for MultiplyDemoCircuit<ConstraintF> {
     fn generate_constraints(
