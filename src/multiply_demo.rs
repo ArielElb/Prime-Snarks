@@ -34,7 +34,7 @@ impl<F: PrimeField> ConstraintSynthesizer<F> for ComponentsCircuit<F> {
         let mut d = FpVar::<F>::new_input(cs.clone(), || self.d.ok_or(SynthesisError::AssignmentMissing))?;
         let mut two= FpVar::<F>::new_input(cs.clone(), || self.d.ok_or(SynthesisError::AssignmentMissing))?;
 
-        let mut curr_var = FpVar::<F>::new_variable(cs,|| Ok(2),ark_r1cs_std::alloc::AllocationMode::Constant);
+        let mut curr_var = FpVar::<F>::new_variable(cs,|| Ok(FpVar::Constant(F::one())),ark_r1cs_std::alloc::AllocationMode::Constant);
 
 
 
