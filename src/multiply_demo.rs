@@ -1,4 +1,12 @@
-use ark_ff::Field;
+use std::ops::{AddAssign, MulAssign};
+use std::str::FromStr;
+
+use ark_bls12_381::Fr;
+use ark_ff::{One,Zero, Field,PrimeField};
+use ark_r1cs_std::alloc::AllocVar;
+use ark_r1cs_std::{fields::fp::FpVar, R1CSVar};
+use ark_r1cs_std::bits::uint32::UInt32;
+
 use ark_relations::{
     lc,
     r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError},
@@ -10,7 +18,36 @@ struct MultiplyDemoCircuit<F: Field> {
     a: Option<F>,
     b: Option<F>,
 }
+struct ComponentsCircuit<F: Field> {
+    s: u64,
+    d: Option<F>,
+    two: Option<F>,
+    n: Option<F>
+}
 
+impl<F: PrimeField> ConstraintSynthesizer<F> for ComponentsCircuit<F> {
+    fn generate_constraints(
+        self,
+        cs: ConstraintSystemRef<F>,
+    ) -> Result<(), SynthesisError> {
+        // we need 2^s = d
+        let mut d = FpVar::<F>::new_input(cs.clone(), || self.d.ok_or(SynthesisError::AssignmentMissing))?;
+        let mut two= FpVar::<F>::new_input(cs.clone(), || self.d.ok_or(SynthesisError::AssignmentMissing))?;
+
+        let mut curr_var = FpVar::<F>::new_variable(cs,|| Ok(2),ark_r1cs_std::alloc::AllocationMode::Constant);
+
+
+
+
+
+        
+
+
+
+
+        Ok(())
+    }
+}
 impl<ConstraintF: Field> ConstraintSynthesizer<ConstraintF> for MultiplyDemoCircuit<ConstraintF> {
     fn generate_constraints(
         self,
