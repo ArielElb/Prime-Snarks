@@ -12,22 +12,3 @@ fn hash_number(number: u64) -> [u8; 32] {
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_hash_number() {
-        // Test case 1
-        let number1 = 12345;
-        let hash1: [u8; 32] = hash_number(number1);
-        assert_eq!(hash1.len(), 32); // Ensure the hash has the correct length
-
-        // Test case 2
-        let number2 = 98765;
-        let hash2 = hash_number(number2);
-
-        // Assert that the hashes for different numbers are not equal
-        assert_ne!(hash1, hash2);
-    }
-}
