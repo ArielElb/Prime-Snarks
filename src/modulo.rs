@@ -30,9 +30,9 @@ impl<ConstraintF: PrimeField> ConstraintSynthesizer<ConstraintF> for ModuloCircu
         println!("y is {}",y.value().unwrap());
 
         println!("x is {}",x.value().unwrap());
-        println!("val is {}",val.value().unwrap());
+        println!("v is {}",val.value().unwrap());
         // Enforce that y < n
-        let less_than = y.is_cmp(&n, std::cmp::Ordering::Less,false)?;
+        //let less_than = y.is_cmp(&n, std::cmp::Ordering::Less,true)?;
         //less_than.enforce_equal(&Boolean::TRUE)?;
 
         Ok(())
@@ -57,7 +57,7 @@ mod tests {
         // Ensure x and n are valid
         //assert!(x < F::MODULUS.into());
         //assert!(n < F::MODULUS.into());
-        let mut q = n - n;
+        let mut q = F::from(0);
         let one = n/n;
         let mut y = x;
         while temp >= n {
