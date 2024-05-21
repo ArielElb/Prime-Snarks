@@ -185,7 +185,7 @@ mod tests {
     fn groth16() {
         use ark_std::test_rng;
         use rand::RngCore;
-        let numrounds = 2000;
+        let numrounds = 200;
         let mut rng = ark_std::rand::rngs::StdRng::seed_from_u64(test_rng().next_u64());
 
         // SETUP THE GROTH16 SNARK
@@ -216,7 +216,7 @@ mod tests {
         use ark_std::test_rng;
         use rand::RngCore;
         use std::mem;
-        let numrounds = 200;
+        let numrounds = 2000;
         let mut rng = ark_std::rand::rngs::StdRng::seed_from_u64(test_rng().next_u64());
 
         // SETUP THE GROTH16 SNARK
