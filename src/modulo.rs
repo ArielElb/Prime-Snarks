@@ -42,8 +42,11 @@ impl<ConstraintF: PrimeField> ConstraintSynthesizer<ConstraintF> for ModuloCircu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ark_bls12_381::Bls12_381;
     use ark_ff::{UniformRand, Zero};
+    use ark_groth16::Groth16;
     use ark_relations::r1cs::ConstraintSystem;
+    use ark_snark::SNARK;
 
     #[test]
     fn modulo_tester() {
@@ -75,10 +78,10 @@ mod tests {
         
         // Instantiate the circuit
         let circuit = ModuloCircuit {
-            x: x_var,
-            q: q_var,
-            n: n_var,
-            y: y_var,
+            x: x_var.clone(),
+            q: q_var.clone(),
+            n: n_var.clone(),
+            y: y_var.clone(),
         };
 
         // Generate constraints
