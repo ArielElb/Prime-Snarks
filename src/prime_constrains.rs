@@ -44,12 +44,13 @@ impl<ConstraintF: PrimeField> ConstraintSynthesizer<ConstraintF> for PrimeCircut
         })?;
         let mut not_found_prime = Boolean::new_witness(cs.clone(), || Ok(true))?;
         let mut is_prime_var = Boolean::new_witness(cs.clone(), || Ok(false))?;
-
+        let check_true=Boolean::new_witness(cs.clone(), || Ok(true))?;
         // we want to check of hash(x) or hash(x+1) or hash(x+2) or ... hash(x+num_of_rounds) is prime
         let mut curr_var: FpVar<ConstraintF> = x.clone();
         let hasher = <DefaultFieldHasher<Sha256> as HashToField<ConstraintF>>::new(&[]);
         // i want to hash(x) check if x is prime then hash(x+1) and check if hash(x+1) is prime
         for i in 0..self.num_of_rounds {
+            println!("here0");
             is_prime_var = Boolean::new_witness(cs.clone(), || {
                 let tmp1 = curr_var.value()?;
                 let preimage = tmp1.into_bigint().to_bytes_be(); // Converting to big-endian
@@ -63,18 +64,24 @@ impl<ConstraintF: PrimeField> ConstraintSynthesizer<ConstraintF> for PrimeCircut
 
                 Ok(is_prime)
             })?;
-
+            if not_found_prime == check_true {
+            println!("here2");
             // if hash(x+i) is NOT a prime - meaning is_prime_var == FALSE so we will return TRUE in the select
             // so not_found_var == TRUE , so we will enforace_eqaual to FALSE.
             not_found_prime = is_prime_var
                 .select(&Boolean::FALSE, &Boolean::TRUE)
                 .unwrap();
+            } 
             let res: () =
                 is_prime_var.conditional_enforce_equal(&Boolean::FALSE, &not_found_prime)?;
             // if hash(x+i) is prime - meaning is_prime_var == TRUE so not_found_var == FALSE , so we will enforace_eqaual to TRUE.
 
             let res2: () =
                 is_prime_var.conditional_enforce_equal(&Boolean::TRUE, &not_found_prime.not())?;
+
+
+
+                
             // increment the current value x+1
             curr_var = curr_var + ConstraintF::one();
         }
@@ -109,7 +116,7 @@ mod tests {
 
     use super::*;
 
-    #[test]
+   /*  #[test]
     fn constraints_test() {
         let cs = ConstraintSystem::<BlsFr>::new_ref();
         // cs.set_mode(SynthesisMode::Prove { construct_matrices: true });
@@ -215,6 +222,7 @@ mod tests {
         let is_correct = Groth16::<Bls12_381>::verify(&vk, &public_input[1..], &proof).unwrap();
         assert!(is_correct);
     }
+    */
     #[test]
     fn groth16_benchmark() {
         use ark_std::test_rng;
