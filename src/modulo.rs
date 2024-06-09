@@ -1,6 +1,6 @@
 use std::cmp;
-
-use ark_ff::{PrimeField, BigInteger};
+use std::borrow::Borrow;
+use ark_ff::{BigInt, BigInteger, PrimeField};
 use ark_r1cs_std::{
     prelude::*,
     fields::fp::FpVar,
@@ -8,17 +8,29 @@ use ark_r1cs_std::{
 };
 use ark_relations::r1cs::{ConstraintSystem, ConstraintSystemRef, ConstraintSynthesizer, SynthesisError};
 use ark_bls12_381::Fq as F;
+use num_bigint::{BigUint, UniformBigUint};
 use rand::thread_rng;
 
-fn Modulo_Checker<ConstraintF>(x: FpVar<ConstraintF>, q: FpVar<ConstraintF>, n: FpVar<ConstraintF>, y: FpVar<ConstraintF>) -> Result<(), SynthesisError>
+struct MyFpVar<ConstraintF:PrimeField>(FpVar<ConstraintF>);
+
+
+//impl<ConstraintF:PrimeField> Borrow<ConstraintF> for MyFpVar<ConstraintF>{
+//    fn borrow(&self) -> &ConstraintF {
+//        let val = self.0.value().expect("should be val");
+//        &val
+//        //return &val.value().unwrap();
+//    } 
+//}
+fn Modulo_Checker<ConstraintF>(x: FpVar<ConstraintF>, q: FpVar<ConstraintF>, n: FpVar<ConstraintF>, y: FpVar<ConstraintF>) -> Result<(Boolean<ConstraintF>), SynthesisError>
 where
     ConstraintF: PrimeField,
     FpVar<ConstraintF>: EqGadget<ConstraintF>,
 {
-    let mul = q.clone() * n.clone();
+    let mul: FpVar<ConstraintF> = q.clone() * n.clone();
     let val = mul + y.clone();
-    x.is_eq(&val)?.enforce_equal(&Boolean::TRUE)?;
-    Ok(())
+    x.is_eq(&val.clone())?.enforce_equal(&Boolean::TRUE)?;
+
+    Ok(ark_r1cs_std::prelude::Boolean::Constant(true))
 }
 fn Modulo_Helper<ConstraintF>(x: FpVar<ConstraintF>, q: FpVar<ConstraintF>, n: FpVar<ConstraintF>, y: FpVar<ConstraintF>) 
 where
@@ -26,9 +38,46 @@ where
     FpVar<ConstraintF>: EqGadget<ConstraintF>,
 {
     let cs = ConstraintSystem::<ConstraintF>::new_ref();
-    let n_var = FpVar::new_input(cs.clone(), || Ok(n)).unwrap();
+    //let n_var = ConstraintF::new_input(cs.clone(), || Ok(n)).unwrap();
+    //let n_var = MyFpVar::new_input(cs.clone(), || Ok(n)).unwrap();
+    //let y_var = FpVar::new_input(cs.clone(), || Ok(y)).unwrap();
+    let mul: FpVar<ConstraintF> = q.clone() * n.clone();
+    let val = mul + y.clone();
+    let result = val.enforce_equal(&x);
+    result.unwrap();
+}
+fn modulo_checker(q_val: BigUint, n_val: BigUint, y_val: BigUint, x_val:BigUint ) {
+    // Create a random field element
+
+    let mut x = F::from(x_val);
+    let mut y = F::from(y_val);
+    let mut q = F::from(q_val);
+    let mut n = F::from(n_val);
+
+    let cs = ConstraintSystem::<F>::new_ref();
+    let x_var: FpVar<_> = FpVar::new_input(cs.clone(), || Ok(x)).unwrap();
+    let q_var = FpVar::new_input(cs.clone(), || Ok(q)).unwrap();
     let n_var = FpVar::new_input(cs.clone(), || Ok(n)).unwrap();
     let y_var = FpVar::new_input(cs.clone(), || Ok(y)).unwrap();
+
+    // Call Modulo_Checker function
+    //let res = Modulo_Checker(x_var.clone(), q_var.clone(), n_var.clone(), y_var.clone()).unwrap();
+    //print!("{:?}",res);
+    //assert!(true);
+    // Instantiate the circuit
+    let circuit = ModuloCircuit {
+        x: x_var.clone(),
+        q: q_var.clone(),
+        n: n_var.clone(),
+        y: y_var.clone(),
+    };
+
+    // Generate constraints
+    circuit.generate_constraints(cs.clone()).unwrap();
+
+    // Check if the constraints are satisfied
+    assert!(cs.is_satisfied().unwrap());
+    println!("Circuit is satisfied");
 }
 pub struct ModuloCircuit<ConstraintF: PrimeField> {
     x: FpVar<ConstraintF>, // input
@@ -100,7 +149,8 @@ mod tests {
         let y_var = FpVar::new_input(cs.clone(), || Ok(y)).unwrap();
 
         // Call Modulo_Checker function
-        let res = Modulo_Checker(x_var.clone(), q_var.clone(), n_var.clone(), x_var.clone()).unwrap();
+        let res = Modulo_Checker(x_var.clone(), q_var.clone(), n_var.clone(), y_var.clone()).unwrap();
+        print!("{:?}",res);
         assert!(true);
         // Instantiate the circuit
         let circuit = ModuloCircuit {
