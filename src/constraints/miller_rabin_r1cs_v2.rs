@@ -18,12 +18,46 @@ use ark_std::test_rng;
 use ark_std::UniformRand;
 use num_bigint::{BigUint, RandBigInt, ToBigUint};
 use num_integer::Integer;
-use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign,Shr,BitAndAssign};
 // import the miller_rabin2 function
 use crate::miller_rabin::miller_rabin_test2;
 use ark_ff::MontBackend;
 
 // miller rabin - https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test
+
+
+fn pow<ConstraintF: PrimeField>(
+    n: FpVar<ConstraintF>,
+    exp: FpVar<ConstraintF>,
+    expected: FpVar<ConstraintF>,
+) -> Result<(), SynthesisError> {
+    let one: Fp<MontBackend<FrConfig, 4>, 4> = Fr::from(1);
+    let mut val: FpVar<ConstraintF> = exp;
+    let mut cur_exp_bit : FpVar<ConstraintF> = &n*&n.inverse().unwrap();
+    let mut res = &n - &n;
+    let two = &n*&n.inverse().unwrap() + &n*&n.inverse().unwrap();
+    let mut two_exp = cur_exp_bit.clone();
+    for i in 0..381{
+        //cur_exp_bit = val & one;
+        //val=val>>res;
+        res += &cur_exp_bit * two_exp.clone();
+        //add constraint?
+        two_exp.mul_assign(&two);
+        //add constraint?
+    }
+    Ok(())
+}
+fn modulo<ConstraintF: PrimeField>(
+    x: FpVar<ConstraintF>, // divided num
+    q: FpVar<ConstraintF>, // div res
+    r: FpVar<ConstraintF>, //remainder
+    y: FpVar<ConstraintF>, //divisor
+) -> Result<(), SynthesisError> {
+    let mul = y*q;
+    let num = mul + r;
+    num.enforce_equal(&x);
+    Ok(())
+}
 
 #[derive(Clone)]
 // create new circut as values of ConstraintF and not FpVar<ConstraintF>:
@@ -33,8 +67,8 @@ pub struct PrimeCircutNotFpVar<ConstraintF: PrimeField> {
     n: ConstraintF,
     d: ConstraintF,
     two_to_s: ConstraintF,
-    s: ConstraintF,
     k: usize,
+    s: ConstraintF,
     a_to_power_d_mod_n_vec: Vec<ConstraintF>,
     x_to_power_of_2_mod_n_vec: Vec<ConstraintF>,
     y_vec: Vec<ConstraintF>,
@@ -388,130 +422,5 @@ mod tests {
         assert!(cs.is_satisfied().unwrap());
     }
 }
-// #[derive(Clone)]
-// pub struct PrimeCircutNew<ConstraintF: PrimeField> {
-//     pub x: Option<ConstraintF>, // public input - seed
-//     pub num_of_rounds: u64,     // public input - number of rounds
-//     n: FpVar<ConstraintF>,
-//     d: FpVar<ConstraintF>,
-//     two_to_s: FpVar<ConstraintF>,
-//     s: FpVar<ConstraintF>,
-//     k: usize,
-//     a_to_power_d_mod_n_vec: Vec<FpVar<ConstraintF>>,
-//     x_to_power_of_2_mod_n_vec: Vec<FpVar<ConstraintF>>,
-//     y_vec: Vec<FpVar<ConstraintF>>,
-//     is_prime: Boolean<ConstraintF>,
-// }
 
-// pub fn miller_rabin3<ConstraintF: PrimeField>(
-//     n: BigUint,
-//     k: usize,
-//     cs: ConstraintSystemRef<ConstraintF>,
-//     circut: &mut PrimeCircutNew<ConstraintF>,
-// ) -> Result<bool, SynthesisError>
-// where
-//     ark_ff::Fp<MontBackend<FrConfig, 4>, 4>: Borrow<ConstraintF>,
-// {
-//     let two: BigUint = 2.to_biguint().unwrap();
-//     if n.eq(&two) {
-//         circut.is_prime = Boolean::new_witness(cs.clone(), || Ok(true))?;
-//     }
-//     if n.is_even() {
-//         circut.is_prime = Boolean::new_witness(cs.clone(), || Ok(false))?;
-//     }
 
-//     let _modulus = <Fr as PrimeField>::MODULUS;
-//     // convert n to a biguint
-//     let n_bigint = n.to_biguint().unwrap();
-//     // convert n_bigint to a biguint:
-//     let one: BigUint = 1.to_biguint().unwrap();
-
-//     let n_minus_one = n_bigint.clone() - one.clone();
-//     let _rng = rand::thread_rng();
-//     let mut s = 0;
-//     let _zero = 0.to_biguint().unwrap();
-
-//     let mut d = n_bigint.clone() - one.clone();
-
-//     // n-1 = 2^s * d
-//     // I want to create witness 2^s and d such as n-1 = 2^s * d
-//     // I will start by finding s:
-//     while d.is_even() {
-//         d = d.div(2.to_biguint().unwrap());
-//         s = s + 1;
-//     }
-//     // create a field element for d:
-//     let d_fr = Fr::from_le_bytes_mod_order(&_modulus.to_bytes_le());
-//     // create witness for d :
-//     let d_var = FpVar::<ConstraintF>::new_witness(cs.clone(), || Ok(d_fr))?;
-//     circut.d.add_assign(d_var.clone());
-
-//     // create s_var:
-//     let s_fr = Fr::from(s);
-//     let s_var = FpVar::<ConstraintF>::new_witness(cs.clone(), || Ok(s_fr))?;
-//     circut.s.add_assign(s_var.clone());
-
-//     // create field element for 2^s:
-//     let two_to_s = two.pow(s).to_biguint().unwrap();
-//     // create witness for 2^s:
-//     let two_to_s_fr = Fr::from_le_bytes_mod_order(&two_to_s.to_bytes_le());
-//     let two_to_s_var = FpVar::<ConstraintF>::new_witness(cs.clone(), || Ok(two_to_s_fr))?;
-
-//     // create a vector of a_to_power_d_mod_n_vec:
-//     let mut a_to_power_d_mod_n_vec = Vec::<FpVar<ConstraintF>>::new();
-
-//     // create a vector of x_to_power_of_2_mod_n_vec:
-//     let mut x_to_power_of_2_mod_n_vec = Vec::<FpVar<ConstraintF>>::new();
-
-//     // create a vector of y_vec:
-//     let mut y_vec = Vec::<FpVar<ConstraintF>>::new();
-
-//     // create a boolean variable is_prime:
-//     let is_prime = Boolean::new_witness(cs.clone(), || Ok(true))?;
-
-//     let mut y = 1.to_biguint().unwrap();
-//     // create a vector of a_to_power_d_mod_n_vec:
-//     for _i in 0..k {
-//         let a = rand::thread_rng().gen_biguint_range(&two, &(&n_bigint.clone() - &two));
-//         let a_to_pow_d_modn = a.modpow(&d, &n_bigint);
-//         let a_fr = Fr::from_le_bytes_mod_order(&a_to_pow_d_modn.to_bytes_le());
-//         let a_pow_d_var = FpVar::<ConstraintF>::new_witness(cs.clone(), || Ok(a_fr))?;
-//         a_to_power_d_mod_n_vec.push(a_pow_d_var);
-//         // Working on x in the inner loop:
-//         let mut x = a_to_pow_d_modn.clone();
-//         for _j in 0..s {
-//             y = x.modpow(&two, &n_bigint);
-
-//             // create x^2 mod n and store it in x_to_power_of_2_mod_n_vec:
-//             let x_to_power_of_2_mod_n = x.modpow(&two, &n_bigint);
-//             let x_fr = Fr::from_le_bytes_mod_order(&x_to_power_of_2_mod_n.to_bytes_le());
-//             let x_var = FpVar::<ConstraintF>::new_witness(cs.clone(), || Ok(x_fr))?;
-//             x_to_power_of_2_mod_n_vec.push(x_var);
-
-//             // create y and store it in y_vec:
-//             let y_fr = Fr::from_le_bytes_mod_order(&y.to_bytes_le());
-//             let y_var = FpVar::<ConstraintF>::new_witness(cs.clone(), || Ok(y_fr))?;
-//             y_vec.push(y_var);
-
-//             if one == y && x != one && x != n_minus_one {
-//                 circut.is_prime = Boolean::new_witness(cs.clone(), || Ok(false))?;
-//                 // return Ok(false);
-//             }
-//             x = y.clone();
-//         }
-//     }
-
-//     // update the circut :
-//     circut.s = s_var;
-//     circut.d = d_var;
-//     circut.a_to_power_d_mod_n_vec = a_to_power_d_mod_n_vec;
-//     circut.x_to_power_of_2_mod_n_vec = x_to_power_of_2_mod_n_vec;
-//     circut.y_vec = y_vec;
-
-//     if circut.is_prime.value().unwrap() == false {
-//         return Ok(false);
-//     } else {
-//         circut.is_prime = Boolean::new_witness(cs.clone(), || Ok(true))?;
-//         return Ok(true);
-//     }
-// }
